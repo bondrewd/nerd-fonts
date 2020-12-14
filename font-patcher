@@ -143,6 +143,7 @@ class font_patcher:
         parser.add_argument('--custom',                                  dest='custom',           default=False, type=str, nargs='?', help='Specify a custom symbol font. All new glyphs will be copied, with no scaling applied.')
         parser.add_argument('-ext', '--extension',                       dest='extension',        default="",    type=str, nargs='?', help='Change font file type to create (e.g., ttf, otf)')
         parser.add_argument('-out', '--outputdir',                       dest='outputdir',        default=".",   type=str, nargs='?', help='The directory to output the patched font file to')
+        parser.add_argument('--font-custom-name',                        dest='outcustom',        default=None,  type=str,            help='Custom font name')
 
         # progress bar arguments - https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
         progressbars_group_parser = parser.add_mutually_exclusive_group(required=False)
@@ -378,9 +379,12 @@ class font_patcher:
         self.sourceFont.fullname   = " ".join(fullname.split())
         self.sourceFont.fontname   = " ".join(fontname.split())
 
-        self.sourceFont.appendSFNTName(str('English (US)'), str('Preferred Family'), self.sourceFont.familyname)
-        self.sourceFont.appendSFNTName(str('English (US)'), str('Family'), self.sourceFont.familyname)
-        self.sourceFont.appendSFNTName(str('English (US)'), str('Compatible Full'), self.sourceFont.fullname)
+        if self.args.outcustom:
+            self.sourceFont.appendSFNTName(str('English (US)'), str('Preferred Family'), self.args.outcustom.replace("-", " "))
+            self.sourceFont.appendSFNTName(str('English (US)'), str('Family'), self.args.outcustom.replace("-", " "))
+        else:
+            self.sourceFont.appendSFNTName(str('English (US)'), str('Preferred Family'), familyname)
+            self.sourceFont.appendSFNTName(str('English (US)'), str('Family'), familyname)
         self.sourceFont.appendSFNTName(str('English (US)'), str('SubFamily'), subFamily)
         self.sourceFont.comment = projectInfo
         self.sourceFont.fontlog = projectInfo
@@ -664,16 +668,15 @@ class font_patcher:
                 sourceFontCounter += 1
 
             if int(copiedToSlot, 16) < 0:
-                print("Found invalid glyph slot number. Skipping.")
+                #print("Found invalid glyph slot number. Skipping.")
                 continue
 
-            if self.args.quiet is False:
-                if self.args.progressbars:
-                    update_progress(round(float(index + 1) / glyphSetLength, 2))
-                else:
-                    progressText = "\nUpdating glyph: " + str(sym_glyph) + " " + str(sym_glyph.glyphname) + " putting at: " + copiedToSlot
-                    sys.stdout.write(progressText)
-                    sys.stdout.flush()
+            if self.args.progressbars:
+                update_progress(round(float(index + 1) / glyphSetLength, 2))
+            else:
+                progressText = "\nUpdating glyph: " + str(sym_glyph) + " " + str(sym_glyph.glyphname) + " putting at: " + copiedToSlot
+                sys.stdout.write(progressText)
+                sys.stdout.flush()
 
             # Prepare symbol glyph dimensions
             sym_dim = get_glyph_dimensions(sym_glyph)
@@ -684,8 +687,8 @@ class font_patcher:
                     copiedToSlot = copiedToSlot[3:]
                 codepoint = int("0x" + copiedToSlot, 16)
                 if codepoint in self.sourceFont:
-                    if self.args.quiet is False:
-                        print("  Found existing Glyph at {}. Skipping...".format(copiedToSlot))
+                    #if self.args.quiet is False:
+                    #    print("  Found existing Glyph at {}. Skipping...".format(copiedToSlot))
 
                     # We don't want to touch anything so move to next Glyph
                     continue
